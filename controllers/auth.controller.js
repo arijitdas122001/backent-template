@@ -137,4 +137,41 @@ try {
 } catch (error) {
   throw new ApiError(error?.message || "Invalid RefreshTokne",401);
 }
+};
+const changeCurrentPassword=async(req,res)=>{
+  try {
+    const {currentPassword,newPassword}=req.body;
+    if(!currentPassword || !newPassword){
+      throw ApiError("Please give the mandatory input fileds",401);
+    }
+    const user=await User.findById(req.user?._id);
+    if(!user){
+      throw ApiError("You are not authinticated",401);
+    }
+    const isPasswordCorrect=await user.isPasswordCorrect(currentPassword);
+    if(!isPasswordCorrect){
+      throw ApiError("Please Enter the valid password",401);
+    }
+      user.password=newPassword;
+      await user.save({validateBeforeSave:false});
+      res.status(200)
+      .json({"success":"password changed"});
+  } catch (error) {
+    throw ApiError("error while chaging the password",400);
+  }
 }
+const updateAvtar=async(req,res)=>{
+  const avtar=req.file?.path;
+  const file=await uploadonCloudniary(avtar);
+  if(!file.url){
+    throw ApiError("Error while uploading on cloudniary",400);
+  }
+  const user=await User.findByIdAndUpdate(req.user._id,{
+    $set:{
+      avatar:file.url,
+    }
+  },
+  {new:true}).select("-password");
+  res.status(200)
+  .send({"success":"avtar updated"});
+};  
