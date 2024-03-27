@@ -175,3 +175,67 @@ const updateAvtar=async(req,res)=>{
   res.status(200)
   .send({"success":"avtar updated"});
 };  
+const getSubscriberandSubCount=async(req,res)=>{
+  // find the user
+  // set aggergate pipelines
+  // is suscribe value check
+  const {username}=req.params;
+  // if(!username){
+  //   throw err
+  // }
+  const channel=await User.aggregate([
+    {
+      $match:{
+        username:username,
+      }
+    },
+    // get the subscriber(I will find in terms of channels)
+    {
+      $lookup:{
+        from:"subscription",
+        localField:"_id",
+        foreignField:"channel",
+        as:"subscribers",
+      }
+    },
+    {
+      $lookup:{
+        from:"subscription",
+        localField:"_id",
+        foreignField:"subscriber",
+        as:"subscribedTo"
+      }
+    },
+    // adding fileds to the User schema
+    {
+      $addFields:{
+        subscriberCount:{
+          $size:"$subscribers"
+        },
+        channelSubscribedTo:{
+          $size:"$subscribedTo"
+        },
+        isSubscribed:{
+          $cond:{
+            if:{ $in:[req.user?._id,"$subscribers.subscribers"] },
+            then:true,
+            else:false,
+          }
+        }
+      }
+    },
+    {
+      $project:{
+        fullName: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1
+      }
+    }
+  ]);
+  res.status(200).send({"success":channel});
+}
